@@ -4,10 +4,7 @@ import jm.task.core.jdbc.model.User;
 import jm.task.core.jdbc.util.Util;
 
 import javax.persistence.Column;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,33 +25,52 @@ public class UserDaoJDBCImpl implements UserDao {
     }
 
     public void createUsersTable() {
-        String sqlCommand = "CREATE TABLE if not exists Users(" +
+        tryingDao("CREATE TABLE if not exists User(" +
                 "    id BIGINT PRIMARY KEY NOT NULL AUTO_INCREMENT ," +
                 "    firstName CHAR(20)," +
                 "    lastName CHAR(20)," +
                 "    age TINYINT" +
-                ")";
-        tryingDao(sqlCommand,"Table is created");
+                ")","Table is created");
     }
 
     public void dropUsersTable() {
-        String sqlCommand = "DROP TABLE Users";
-        tryingDao(sqlCommand,"Table is dropped");
+        tryingDao("DROP TABLE User","Table is dropped");
     }
 
     public void saveUser(String name, String lastName, byte age) {
-        String sqlCommand = "insert into Users(firstName,lastName,age)" +
-                " values('"+name+"','"+lastName+"',"+age+")";
-        tryingDao(sqlCommand,"User с именем – "+name+" добавлен в базу данных");
+        try (Connection conn = Util.getMySQLConnection()){
+            PreparedStatement preparedStatement = conn.
+                    prepareStatement("insert into User(firstName,lastName,age)" +
+                                                    " values(?,?,?)");
+            preparedStatement.setString(1, name);
+            preparedStatement.setString(2, lastName);
+            preparedStatement.setByte(3, age);
+
+            preparedStatement.executeUpdate();
+            System.out.println("User с именем – "+name+" добавлен в базу данных");
+        } catch (SQLException throwables) {
+            System.out.println(throwables.getMessage());
+        } catch (ClassNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public void removeUserById(long id) {
-        String sqlCommand = "DELETE FROM Users WHERE id ="+id;
-        tryingDao(sqlCommand,"User is removed");
+        try (Connection conn = Util.getMySQLConnection()){
+            PreparedStatement preparedStatement = conn.
+                    prepareStatement("DELETE FROM User WHERE id = ?");
+            preparedStatement.setLong(1, id);
+            preparedStatement.executeUpdate();
+            System.out.println("User is removed");
+        } catch (SQLException throwables) {
+            System.out.println(throwables.getMessage());
+        } catch (ClassNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public List<User> getAllUsers() {
-        String sqlCommand = "select * from Users";
+        String sqlCommand = "select * from User";
         List<User> listUsers = new ArrayList<>();
         try (Connection conn = Util.getMySQLConnection()){
             Statement statement = conn.createStatement();
@@ -78,7 +94,6 @@ public class UserDaoJDBCImpl implements UserDao {
     }
 
     public void cleanUsersTable() {
-        String sqlCommand = "DELETE FROM Users WHERE id >=1";
-        tryingDao(sqlCommand,"Table is clean");
+        tryingDao("DELETE FROM User WHERE id >=1","Table is clean");
     }
 }
